@@ -1,4 +1,5 @@
 import keras
+import os
 import tensorflow as tf
 
 from keras.datasets import cifar10
@@ -108,4 +109,5 @@ def run():
 
 
 if __name__ == '__main__':
+    os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
     run()
