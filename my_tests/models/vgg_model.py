@@ -1,4 +1,4 @@
-from vgg import cifar10vgg
+from my_tests.models.vgg import cifar10vgg
 
 
 def get_vgg_model(logits=False, input_ph=None):
