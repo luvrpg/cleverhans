@@ -7,7 +7,7 @@ from cleverhans.attacks import FastGradientMethod, DeepFool
 from cleverhans.utils import AccuracyReport
 from cleverhans.utils_keras import KerasModelWrapper
 from cleverhans.utils_tf import model_eval, model_train
-from my_tests.models.vgg_model import get_vgg_model
+from my_tests.models.vgg import get_vgg_model
 
 
 def prepare_cifar_data():
