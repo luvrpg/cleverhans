@@ -1,6 +1,7 @@
 import keras
 import os
 import tensorflow as tf
+import numpy as np
 
 from keras.datasets import cifar10
 
@@ -8,10 +9,11 @@ from cleverhans.attacks import FastGradientMethod, DeepFool
 from cleverhans.utils import AccuracyReport
 from cleverhans.utils_keras import KerasModelWrapper
 from cleverhans.utils_tf import model_eval, model_train
-from my_tests.models.vgg import get_vgg_model
+from my_tests.models.vgg import cifar10vgg
+from networks.resnet import ResNet
 
 
-def prepare_cifar_data():
+def prepare_cifar_data(vgg=None, resnet=None):
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
 
     x_train = x_train.astype('float32')
@@ -19,8 +21,20 @@ def prepare_cifar_data():
     y_train = keras.utils.to_categorical(y_train, 10)
     y_test = keras.utils.to_categorical(y_test, 10)
 
-    label_smooth = .1
-    y_train = y_train.clip(label_smooth / 9., 1. - label_smooth)
+    # prepare data for VGG
+    if vgg:
+        mean = 120.707
+        std = 64.15
+        x_test = (x_test - mean) / (std + 1e-7)
+
+    if resnet:
+        if x_test.ndim < 4:
+            x_test = np.array([x_test])
+        mean = [125.307, 122.95, 113.865]
+        std = [62.9932, 62.0887, 66.7048]
+        for img in x_test:
+            for i in range(3):
+                img[:, :, i] = (img[:, :, i] - mean[i]) / std[i]
 
     return x_train, x_test, y_train, y_test
 
@@ -57,18 +71,22 @@ def eval_adv_model(sess, x, y, predictions, predictions_adv, x_test, y_test, rep
 
 
 def run():
-    x_train, x_test, y_train, y_test = prepare_cifar_data()
+    keras.layers.core.K.set_learning_phase(0)
     report = AccuracyReport()
     sess = tf.Session()
     keras.backend.set_session(sess)
 
+    # vgg_model = cifar10vgg(train=False)
+    resnet_model = ResNet()
+    model = resnet_model.model
+
+    x_train, x_test, y_train, y_test = prepare_cifar_data(resnet=True)
+
     x = tf.placeholder(tf.float32, shape=(None, 32, 32, 3))
     y = tf.placeholder(tf.float32, shape=(None, 10))
-
-    vgg_model = get_vgg_model()
-    model = vgg_model
     predictions = model(x)
     print("Defined TensorFlow model graph.")
+
     eval_model_accuracy(sess, x, y, predictions, x_test, y_test, report)
 
     # FGSM ATTACK
@@ -90,7 +108,8 @@ def run():
     # eval_model_accuracy_adv_samples(sess, x, y, predictions_adv_deepfool, x_test, y_test, report)
 
     # ADVERSARIAL TRAINING
-    model_2 = get_vgg_model()
+    vgg_model = cifar10vgg(train=False)
+    model_2 = vgg_model.model
     predictions_2 = model_2(x)
     wrap_2 = KerasModelWrapper(model_2)
     fgsm2 = FastGradientMethod(wrap_2, sess=sess)
