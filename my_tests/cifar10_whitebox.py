@@ -13,7 +13,7 @@ from my_tests.models.vgg import cifar10vgg
 from networks.resnet import ResNet
 
 
-def prepare_cifar_data(vgg=None, resnet=None):
+def prepare_cifar_data(vgg=None, resnet=None, net_in_net=None):
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
 
     x_train = x_train.astype('float32')
@@ -27,7 +27,7 @@ def prepare_cifar_data(vgg=None, resnet=None):
         std = 64.15
         x_test = (x_test - mean) / (std + 1e-7)
 
-    if resnet:
+    if resnet or net_in_net:
         if x_test.ndim < 4:
             x_test = np.array([x_test])
         mean = [125.307, 122.95, 113.865]
@@ -47,6 +47,7 @@ def eval_model(sess, x, y, predictions, x_test, y_test, batch_size=128):
 def eval_model_accuracy(sess, x, y, predictions, x_test, y_test, report,):
     # accuracy on clean samples, model trained on clean samples
     acc = eval_model(sess, x, y, predictions, x_test, y_test)
+    print('Test accuracy on legitimate examples: %0.4f\n' % acc)
     report.clean_train_clean_eval = acc
 
 
