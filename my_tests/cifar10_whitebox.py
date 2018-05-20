@@ -75,12 +75,7 @@ def eval_adv_model(sess, x, y, predictions, predictions_adv, x_test, y_test, rep
     report.adv_train_adv_eval = acc2
 
 
-def run(vgg=False, resnet=False, net_in_net=False, densenet=False):
-    keras.layers.core.K.set_learning_phase(0)
-    report = AccuracyReport()
-    sess = tf.Session()
-    keras.backend.set_session(sess)
-
+def get_model_wrapper(vgg, resnet, net_in_net, densenet):
     model_wrapper = None
     if vgg:
         model_wrapper = cifar10vgg(train=False)
@@ -91,8 +86,35 @@ def run(vgg=False, resnet=False, net_in_net=False, densenet=False):
     if densenet:
         model_wrapper = DenseNet()
 
+    return model_wrapper
+
+
+def get_adversarial_attack_and_params(attack_name, wrap, sess):
+    params = None
+    stop_gradient = False
+
+    if attack_name == "fgsm":
+        attack = FastGradientMethod(wrap, sess=sess)
+        params = {'eps': 0.3,
+                  'clip_min': 0.,
+                  'clip_max': 1.}
+        stop_gradient = True
+    if attack_name == "deepfool":
+        attack = DeepFool(wrap, sess=sess)
+
+    return attack, params, stop_gradient
+
+
+def run(vgg=False, resnet=False, net_in_net=False, densenet=False, attack=None, train=True):
+    keras.layers.core.K.set_learning_phase(0)
+    report = AccuracyReport()
+    sess = tf.Session()
+    keras.backend.set_session(sess)
+
+    model_wrapper = get_model_wrapper(vgg, resnet, net_in_net, densenet)
     if model_wrapper is None:
         Exception("No model provided")
+
     model = model_wrapper.model
 
     x_train, x_test, y_train, y_test = prepare_cifar_data(vgg=vgg, resnet=resnet, net_in_net=net_in_net,
@@ -105,54 +127,56 @@ def run(vgg=False, resnet=False, net_in_net=False, densenet=False):
 
     eval_model_accuracy(sess, x, y, predictions, x_test, y_test, report)
 
-    # FGSM ATTACK
+    # ATTACK
     wrap = KerasModelWrapper(model)
-    fgsm = FastGradientMethod(wrap, sess=sess)
-    fgsm_params = {'eps': 0.3,
-                   'clip_min': 0.,
-                   'clip_max': 1.}
-    adv_x = fgsm.generate(x, **fgsm_params)
-    # Consider the attack to be constant
-    adv_x = tf.stop_gradient(adv_x)
+    attack, params, stop_gradient = get_adversarial_attack_and_params(attack, wrap, sess)
+
+    adv_x = attack.generate(x, **params) if params else attack.generate(x)
+    if stop_gradient:
+        # Consider the attack to be constant
+        adv_x = tf.stop_gradient(adv_x)
+
     predictions_adv = model(adv_x)
     eval_model_accuracy_adv_samples(sess, x, y, predictions_adv, x_test, y_test, report)
 
-    # # DEEPFOOL ATTACK
-    # deepfool = DeepFool(wrap, sess=sess)
-    # adv_x_deepfool = deepfool.generate(x)
-    # predictions_adv_deepfool = model(adv_x_deepfool)
-    # eval_model_accuracy_adv_samples(sess, x, y, predictions_adv_deepfool, x_test, y_test, report)
+    if train:
+        # ADVERSARIAL TRAINING
+        model_wrapper_adv = get_model_wrapper(vgg, resnet, net_in_net, densenet)
+        model_2 = model_wrapper_adv.model
+        predictions_2 = model_2(x)
+        wrap_2 = KerasModelWrapper(model_2)
 
-    # ADVERSARIAL TRAINING
-    vgg_model = cifar10vgg(train=False)
-    model_2 = vgg_model.model
-    predictions_2 = model_2(x)
-    wrap_2 = KerasModelWrapper(model_2)
-    fgsm2 = FastGradientMethod(wrap_2, sess=sess)
-    predictions_2_adv = model_2(fgsm2.generate(x, **fgsm_params))
+        attack2, params2, stop_gradient2 = get_adversarial_attack_and_params(attack, wrap_2, sess)
+        adv_x_2 = attack2.generate(x, **params2) if params2 else attack.generate(x)
+        predictions_2_adv = model_2(adv_x_2)
 
-    train_params = {
-        'nb_epochs': 5,
-        'batch_size': 128,
-        'learning_rate': 0.001,
-        'train_dir': r"C:\Users\pan\Desktop\wyniki\adversarially_crafted_cifar10",
-        'filename': "adversarially_crafted.ckpt"
-    }
-    model_train(sess, x, y, predictions_2, x_train, y_train,
-                predictions_adv=predictions_2_adv, evaluate=eval_adv_model,
-                args=train_params, save=True)
+        train_params = {
+            'nb_epochs': 5,
+            'batch_size': 128,
+            'learning_rate': 0.001,
+            'train_dir': r"C:\Users\pan\Desktop\wyniki\adversarially_crafted_cifar10",
+            'filename': "adversarially_crafted.ckpt"
+        }
+        model_train(sess, x, y, predictions_2, x_train, y_train,
+                    predictions_adv=predictions_2_adv, evaluate=eval_adv_model,
+                    args=train_params, save=True)
 
 
 if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
     parser = argparse.ArgumentParser(description='Attack models on Cifar10')
     parser.add_argument('--model', default=None)
+    parser.add_argument('--attack', default="fgsm")
+    parser.add_argument('--train', default=True)
+
     args = parser.parse_args()
-    model = args.model
+    model_to_run = args.model
+    attack_to_run = args.attack
+    do_train = args.train
 
-    is_vgg = True if model == "vgg" else False
-    is_resnet = True if model == "resnet" else False
-    is_net_in_net = True if model == "net_in_net" else False
-    is_densenet = True if model == "densenet" else False
+    is_vgg = True if model_to_run == "vgg" else False
+    is_resnet = True if model_to_run == "resnet" else False
+    is_net_in_net = True if model_to_run == "net_in_net" else False
+    is_densenet = True if model_to_run == "densenet" else False
 
-    run(vgg=is_vgg, resnet=is_resnet, net_in_net=is_net_in_net, densenet=is_densenet)
+    run(vgg=is_vgg, resnet=is_resnet, net_in_net=is_net_in_net, densenet=is_densenet, attack=attack_to_run, train=do_train)
