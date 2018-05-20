@@ -12,11 +12,9 @@ from cleverhans.attacks import FastGradientMethod, DeepFool, LBFGS, SaliencyMapM
 from cleverhans.utils import AccuracyReport
 from cleverhans.utils_keras import KerasModelWrapper
 from cleverhans.utils_tf import model_eval, model_train
+from my_tests.models.net_in_net import NetworkInNetwork
+from my_tests.models.resnet import ResNet
 from my_tests.models.vgg import cifar10vgg
-from networks.densenet import DenseNet
-from networks.network_in_network import NetworkInNetwork
-from networks.resnet import ResNet
-
 
 def prepare_cifar_data(vgg=None, resnet=None, net_in_net=None, densenet=None):
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
@@ -84,8 +82,6 @@ def get_model_wrapper(vgg, resnet, net_in_net, densenet):
         model_wrapper = ResNet()
     if net_in_net:
         model_wrapper = NetworkInNetwork()
-    if densenet:
-        model_wrapper = DenseNet()
 
     return model_wrapper
 
