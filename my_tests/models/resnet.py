@@ -8,8 +8,6 @@ from keras.callbacks import LearningRateScheduler, TensorBoard, ModelCheckpoint
 from keras.models import Model, load_model
 from keras import optimizers, regularizers
 
-from networks.train_plot import PlotLearning
-
 
 # Code taken from https://github.com/BIGBALLON/cifar-10-cnn
 class ResNet:
@@ -140,8 +138,8 @@ class ResNet:
         change_lr = LearningRateScheduler(self.scheduler)
         checkpoint = ModelCheckpoint(self.model_filename,
                                      monitor='val_loss', verbose=0, save_best_only=True, mode='auto')
-        plot_callback = PlotLearning()
-        cbks = [change_lr, tb_cb, checkpoint, plot_callback]
+
+        cbks = [change_lr, tb_cb, checkpoint]
 
         # set data augmentation
         print('Using real-time data augmentation.')
