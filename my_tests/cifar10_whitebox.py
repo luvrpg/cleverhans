@@ -31,7 +31,7 @@ def prepare_cifar_data(vgg=None, resnet=None, net_in_net=None, densenet=None):
         std = 64.15
         x_test = (x_test - mean) / (std + 1e-7)
 
-    if resnet or net_in_net:
+    if resnet or net_in_net or densenet:
         if x_test.ndim < 4:
             x_test = np.array([x_test])
         mean = [125.307, 122.95, 113.865]
