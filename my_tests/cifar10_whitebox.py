@@ -1,4 +1,5 @@
 import argparse
+import timeit
 
 import keras
 import os
@@ -110,6 +111,7 @@ def get_adversarial_attack_and_params(attack_name, wrap, sess):
 
 
 def run(vgg=False, resnet=False, net_in_net=False, densenet=False, attack=None, train=True):
+    start = timeit.default_timer()
     keras.layers.core.K.set_learning_phase(0)
     report = AccuracyReport()
     sess = tf.Session()
@@ -164,6 +166,9 @@ def run(vgg=False, resnet=False, net_in_net=False, densenet=False, attack=None, 
         model_train(sess, x, y, predictions_2, x_train, y_train,
                     predictions_adv=predictions_2_adv, evaluate=eval_adv_model,
                     args=train_params, save=True)
+
+    stop = timeit.default_timer()
+    print(str(stop - start))
 
 
 if __name__ == '__main__':
