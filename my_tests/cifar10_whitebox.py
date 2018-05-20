@@ -1,3 +1,5 @@
+import argparse
+
 import keras
 import os
 import tensorflow as tf
@@ -10,10 +12,12 @@ from cleverhans.utils import AccuracyReport
 from cleverhans.utils_keras import KerasModelWrapper
 from cleverhans.utils_tf import model_eval, model_train
 from my_tests.models.vgg import cifar10vgg
+from networks.densenet import DenseNet
+from networks.network_in_network import NetworkInNetwork
 from networks.resnet import ResNet
 
 
-def prepare_cifar_data(vgg=None, resnet=None, net_in_net=None):
+def prepare_cifar_data(vgg=None, resnet=None, net_in_net=None, densenet=None):
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
 
     x_train = x_train.astype('float32')
@@ -44,7 +48,7 @@ def eval_model(sess, x, y, predictions, x_test, y_test, batch_size=128):
     return model_eval(sess, x, y, predictions, x_test, y_test, args=eval_params)
 
 
-def eval_model_accuracy(sess, x, y, predictions, x_test, y_test, report,):
+def eval_model_accuracy(sess, x, y, predictions, x_test, y_test, report):
     # accuracy on clean samples, model trained on clean samples
     acc = eval_model(sess, x, y, predictions, x_test, y_test)
     print('Test accuracy on legitimate examples: %0.4f\n' % acc)
@@ -71,17 +75,28 @@ def eval_adv_model(sess, x, y, predictions, predictions_adv, x_test, y_test, rep
     report.adv_train_adv_eval = acc2
 
 
-def run():
+def run(vgg=False, resnet=False, net_in_net=False, densenet=False):
     keras.layers.core.K.set_learning_phase(0)
     report = AccuracyReport()
     sess = tf.Session()
     keras.backend.set_session(sess)
 
-    # vgg_model = cifar10vgg(train=False)
-    resnet_model = ResNet()
-    model = resnet_model.model
+    model_wrapper = None
+    if vgg:
+        model_wrapper = cifar10vgg(train=False)
+    if resnet:
+        model_wrapper = ResNet()
+    if net_in_net:
+        model_wrapper = NetworkInNetwork()
+    if densenet:
+        model_wrapper = DenseNet()
 
-    x_train, x_test, y_train, y_test = prepare_cifar_data(resnet=True)
+    if model_wrapper is None:
+        Exception("No model provided")
+    model = model_wrapper.model
+
+    x_train, x_test, y_train, y_test = prepare_cifar_data(vgg=vgg, resnet=resnet, net_in_net=net_in_net,
+                                                          densenet=densenet)
 
     x = tf.placeholder(tf.float32, shape=(None, 32, 32, 3))
     y = tf.placeholder(tf.float32, shape=(None, 10))
@@ -130,4 +145,14 @@ def run():
 
 if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-    run()
+    parser = argparse.ArgumentParser(description='Attack models on Cifar10')
+    parser.add_argument('--model', default=None)
+    args = parser.parse_args()
+    model = args.model
+
+    is_vgg = True if model == "vgg" else False
+    is_resnet = True if model == "resnet" else False
+    is_net_in_net = True if model == "net_in_net" else False
+    is_densenet = True if model == "densenet" else False
+
+    run(vgg=is_vgg, resnet=is_resnet, net_in_net=is_net_in_net, densenet=is_densenet)
