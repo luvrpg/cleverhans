@@ -21,7 +21,7 @@ class cifar10vgg:
         if train:
             self.model = self.train(self.model)
         else:
-            self.model.load_weights('cifar10vgg.h5')
+            self.model.load_weights('/home/one-pixel-attack-keras-master/vgg_models/cifar10vgg.h5')
 
     def build_model(self):
         # Build the network of vgg for 10 classes with massive dropout and weight decay as described in the paper.

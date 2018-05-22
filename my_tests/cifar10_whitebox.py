@@ -106,7 +106,7 @@ def get_adversarial_attack_and_params(attack_name, wrap, sess):
     return attack, params, stop_gradient
 
 
-def run(vgg=False, resnet=False, net_in_net=False, densenet=False, attack=None, train=True):
+def run(vgg=False, resnet=False, net_in_net=False, densenet=False, attack_name=None, train=True):
     start = timeit.default_timer()
     keras.layers.core.K.set_learning_phase(0)
     report = AccuracyReport()
@@ -131,7 +131,7 @@ def run(vgg=False, resnet=False, net_in_net=False, densenet=False, attack=None, 
 
     # ATTACK
     wrap = KerasModelWrapper(model)
-    attack, params, stop_gradient = get_adversarial_attack_and_params(attack, wrap, sess)
+    attack, params, stop_gradient = get_adversarial_attack_and_params(attack_name, wrap, sess)
 
     adv_x = attack.generate(x, **params) if params else attack.generate(x)
     if stop_gradient:
@@ -148,19 +148,27 @@ def run(vgg=False, resnet=False, net_in_net=False, densenet=False, attack=None, 
         predictions_2 = model_2(x)
         wrap_2 = KerasModelWrapper(model_2)
 
-        attack2, params2, stop_gradient2 = get_adversarial_attack_and_params(attack, wrap_2, sess)
+        attack2, params2, stop_gradient2 = get_adversarial_attack_and_params(attack_name, wrap_2, sess)
         adv_x_2 = attack2.generate(x, **params2) if params2 else attack.generate(x)
         predictions_2_adv = model_2(adv_x_2)
+
+        def eval2():
+            acc = eval_model(sess, x, y, predictions_2, x_test, y_test)
+            print('Test accuracy on legitimate examples: %0.4f' % acc)
+            report.adv_train_clean_eval = acc
+            acc2 = eval_model(sess, x, y, predictions_2_adv, x_test, y_test)
+            print('Test accuracy on adversarial examples: %0.4f' % acc2)
+            report.adv_train_adv_eval = acc2
 
         train_params = {
             'nb_epochs': 5,
             'batch_size': 128,
             'learning_rate': 0.001,
-            'train_dir': r"C:\Users\pan\Desktop\wyniki\adversarially_crafted_cifar10",
+            'train_dir': r"/home/cleverhans/my_tests/adversarially_crafted_net_in_net.ckpt",
             'filename': "adversarially_crafted.ckpt"
         }
         model_train(sess, x, y, predictions_2, x_train, y_train,
-                    predictions_adv=predictions_2_adv, evaluate=eval_adv_model,
+                    predictions_adv=predictions_2_adv, evaluate=eval2,
                     args=train_params, save=True)
 
     stop = timeit.default_timer()
@@ -172,7 +180,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Attack models on Cifar10')
     parser.add_argument('--model', default=None)
     parser.add_argument('--attack', default="fgsm")
-    parser.add_argument('--train', default=True)
+    parser.add_argument('--train', default=False)
 
     args = parser.parse_args()
     model_to_run = args.model
@@ -184,4 +192,4 @@ if __name__ == '__main__':
     is_net_in_net = True if model_to_run == "net_in_net" else False
     is_densenet = True if model_to_run == "densenet" else False
 
-    run(vgg=is_vgg, resnet=is_resnet, net_in_net=is_net_in_net, densenet=is_densenet, attack=attack_to_run, train=do_train)
+    run(vgg=is_vgg, resnet=is_resnet, net_in_net=is_net_in_net, densenet=is_densenet, attack_name=attack_to_run, train=do_train)

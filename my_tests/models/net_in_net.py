@@ -15,7 +15,7 @@ from keras.callbacks import LearningRateScheduler, TensorBoard, ModelCheckpoint
 class NetworkInNetwork:
     def __init__(self, epochs=200, batch_size=128, load_weights=True):
         self.name = 'net_in_net'
-        self.model_filename = 'networks/models/net_in_net.h5'
+        self.model_filename = '/home/one-pixel-attack-keras-master/networks/models/net_in_net.h5'
         self.num_classes = 10
         self.input_shape = 32, 32, 3
         self.batch_size = batch_size
@@ -27,13 +27,13 @@ class NetworkInNetwork:
 
         if load_weights:
             try:
-                self._model = load_model(self.model_filename)
+                self.model = load_model(self.model_filename)
                 print('Successfully loaded', self.name)
             except (ImportError, ValueError, OSError):
                 print('Failed to load', self.name)
 
     def count_params(self):
-        return self._model.count_params()
+        return self.model.count_params()
 
     def color_preprocessing(self, x_train, x_test):
         x_train = x_train.astype('float32')
@@ -144,7 +144,7 @@ class NetworkInNetwork:
 
         model.save(self.model_filename)
 
-        self._model = model
+        self.model = model
 
     def color_process(self, imgs):
         if imgs.ndim < 4:
@@ -159,7 +159,7 @@ class NetworkInNetwork:
 
     def predict(self, img):
         processed = self.color_process(img)
-        return self._model.predict(processed, batch_size=self.batch_size)
+        return self.model.predict(processed, batch_size=self.batch_size)
 
     def predict_one(self, img):
         return self.predict(img)[0]
@@ -172,4 +172,4 @@ class NetworkInNetwork:
         # color preprocessing
         x_train, x_test = self.color_preprocessing(x_train, x_test)
 
-        return self._model.evaluate(x_test, y_test, verbose=0)[1]
+        return self.model.evaluate(x_test, y_test, verbose=0)[1]

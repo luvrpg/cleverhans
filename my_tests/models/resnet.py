@@ -13,7 +13,7 @@ from keras import optimizers, regularizers
 class ResNet:
     def __init__(self, epochs=200, batch_size=128, load_weights=True):
         self.name = 'resnet'
-        self.model_filename = r'C:\Users\pan\Desktop\one-pixel-attack-keras-master\networks\models\resnet.h5'
+        self.model_filename = r'/home/one-pixel-attack-keras-master/networks/models/resnet.h5'
 
         self.stack_n = 5
         self.num_classes = 10
