@@ -8,7 +8,7 @@ import numpy as np
 
 from keras.datasets import cifar10
 
-from cleverhans.attacks import FastGradientMethod, DeepFool, LBFGS, SaliencyMapMethod
+from cleverhans.attacks import FastGradientMethod, DeepFool, LBFGS, SaliencyMapMethod, BasicIterativeMethod
 from cleverhans.utils import AccuracyReport
 from cleverhans.utils_keras import KerasModelWrapper
 from cleverhans.utils_tf import model_eval, model_train
@@ -102,6 +102,8 @@ def get_adversarial_attack_and_params(attack_name, wrap, sess):
         attack = LBFGS(wrap, sess=sess)
     if attack_name == "saliency":
         attack = SaliencyMapMethod(wrap, sess=sess)
+    if attack_name == "bim":
+        attack = BasicIterativeMethod(wrap, sess=sess)
 
     return attack, params, stop_gradient
 
@@ -132,6 +134,7 @@ def run(vgg=False, resnet=False, net_in_net=False, densenet=False, attack_name=N
     # ATTACK
     wrap = KerasModelWrapper(model)
     attack, params, stop_gradient = get_adversarial_attack_and_params(attack_name, wrap, sess)
+    params = {"y_target": y, "batch_size": 1}
 
     adv_x = attack.generate(x, **params) if params else attack.generate(x)
     if stop_gradient:
