@@ -16,7 +16,8 @@ from my_tests.models.net_in_net import NetworkInNetwork
 from my_tests.models.resnet import ResNet
 from my_tests.models.vgg import cifar10vgg
 
-def prepare_cifar_data(vgg=None, resnet=None, net_in_net=None, densenet=None):
+
+def prepare_cifar_data(vgg=None, resnet=None, net_in_net=None, densenet=None, train=False):
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
 
     x_train = x_train.astype('float32')
@@ -29,6 +30,8 @@ def prepare_cifar_data(vgg=None, resnet=None, net_in_net=None, densenet=None):
         mean = 120.707
         std = 64.15
         x_test = (x_test - mean) / (std + 1e-7)
+        if train:
+            x_train = (x_train - mean) / (std + 1e-7)
 
     if resnet or net_in_net or densenet:
         if x_test.ndim < 4:
@@ -38,6 +41,13 @@ def prepare_cifar_data(vgg=None, resnet=None, net_in_net=None, densenet=None):
         for img in x_test:
             for i in range(3):
                 img[:, :, i] = (img[:, :, i] - mean[i]) / std[i]
+
+        if train:
+            if x_train.ndim < 4:
+                x_train = np.array([x_test])
+            for img in x_train:
+                for i in range(3):
+                    img[:, :, i] = (img[:, :, i] - mean[i]) / std[i]
 
     return x_train, x_test, y_train, y_test
 
@@ -115,7 +125,7 @@ def run(vgg=False, resnet=False, net_in_net=False, densenet=False, attack_name=N
     sess = tf.Session()
     keras.backend.set_session(sess)
 
-    model_wrapper = get_model_wrapper(vgg, resnet, net_in_net, densenet)
+    model_wrapper = get_model_wrapper(vgg, resnet, net_in_net, densenet, train)
     if model_wrapper is None:
         Exception("No model provided")
 
@@ -164,11 +174,11 @@ def run(vgg=False, resnet=False, net_in_net=False, densenet=False, attack_name=N
             report.adv_train_adv_eval = acc2
 
         train_params = {
-            'nb_epochs': 5,
+            'nb_epochs': 200 if not vgg else 250,
             'batch_size': 128,
             'learning_rate': 0.001,
-            'train_dir': r"/home/cleverhans/my_tests/adversarially_crafted_net_in_net.ckpt",
-            'filename': "adversarially_crafted.ckpt"
+            'train_dir': r"/home/cleverhans/my_tests/adversarially_crafted_{}".format(model_wrapper_adv.name),
+            'filename': "adversarially_crafted_{}.ckpt".format(model_wrapper_adv.name)
         }
         model_train(sess, x, y, predictions_2, x_train, y_train,
                     predictions_adv=predictions_2_adv, evaluate=eval2,

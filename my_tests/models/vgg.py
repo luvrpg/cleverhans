@@ -13,6 +13,7 @@ from keras.preprocessing.image import ImageDataGenerator
 
 class cifar10vgg:
     def __init__(self, train=True):
+        self.name = "vgg"
         self.num_classes = 10
         self.weight_decay = 0.0005
         self.x_shape = [32, 32, 3]
