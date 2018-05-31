@@ -125,14 +125,14 @@ def run(vgg=False, resnet=False, net_in_net=False, densenet=False, attack_name=N
     sess = tf.Session()
     keras.backend.set_session(sess)
 
-    model_wrapper = get_model_wrapper(vgg, resnet, net_in_net, densenet, train)
+    model_wrapper = get_model_wrapper(vgg, resnet, net_in_net, densenet)
     if model_wrapper is None:
         Exception("No model provided")
 
     # model = model_wrapper.model
 
     x_train, x_test, y_train, y_test = prepare_cifar_data(vgg=vgg, resnet=resnet, net_in_net=net_in_net,
-                                                          densenet=densenet)
+                                                          densenet=densenet, train=train)
 
     x = tf.placeholder(tf.float32, shape=(None, 32, 32, 3))
     y = tf.placeholder(tf.float32, shape=(None, 10))
