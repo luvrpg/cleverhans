@@ -119,30 +119,30 @@ def run(vgg=False, resnet=False, net_in_net=False, densenet=False, attack_name=N
     if model_wrapper is None:
         Exception("No model provided")
 
-    model = model_wrapper.model
+    # model = model_wrapper.model
 
     x_train, x_test, y_train, y_test = prepare_cifar_data(vgg=vgg, resnet=resnet, net_in_net=net_in_net,
                                                           densenet=densenet)
 
     x = tf.placeholder(tf.float32, shape=(None, 32, 32, 3))
     y = tf.placeholder(tf.float32, shape=(None, 10))
-    predictions = model(x)
+    # predictions = model(x)
     print("Defined TensorFlow model graph.")
 
-    eval_model_accuracy(sess, x, y, predictions, x_test, y_test, report)
+    # eval_model_accuracy(sess, x, y, predictions, x_test, y_test, report)
 
-    # ATTACK
-    wrap = KerasModelWrapper(model)
-    attack, params, stop_gradient = get_adversarial_attack_and_params(attack_name, wrap, sess)
-    params = {"y_target": y, "batch_size": 1}
-
-    adv_x = attack.generate(x, **params) if params else attack.generate(x)
-    if stop_gradient:
-        # Consider the attack to be constant
-        adv_x = tf.stop_gradient(adv_x)
-
-    predictions_adv = model(adv_x)
-    eval_model_accuracy_adv_samples(sess, x, y, predictions_adv, x_test, y_test, report)
+    # # ATTACK
+    # wrap = KerasModelWrapper(model)
+    # attack, params, stop_gradient = get_adversarial_attack_and_params(attack_name, wrap, sess)
+    # params = {"y_target": y, "batch_size": 1}
+    #
+    # adv_x = attack.generate(x, **params) if params else attack.generate(x)
+    # if stop_gradient:
+    #     # Consider the attack to be constant
+    #     adv_x = tf.stop_gradient(adv_x)
+    #
+    # predictions_adv = model(adv_x)
+    # eval_model_accuracy_adv_samples(sess, x, y, predictions_adv, x_test, y_test, report)
 
     if train:
         # ADVERSARIAL TRAINING
@@ -152,7 +152,7 @@ def run(vgg=False, resnet=False, net_in_net=False, densenet=False, attack_name=N
         wrap_2 = KerasModelWrapper(model_2)
 
         attack2, params2, stop_gradient2 = get_adversarial_attack_and_params(attack_name, wrap_2, sess)
-        adv_x_2 = attack2.generate(x, **params2) if params2 else attack.generate(x)
+        adv_x_2 = attack2.generate(x, **params2) if params2 else attack2.generate(x)
         predictions_2_adv = model_2(adv_x_2)
 
         def eval2():
@@ -183,7 +183,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Attack models on Cifar10')
     parser.add_argument('--model', default=None)
     parser.add_argument('--attack', default="fgsm")
-    parser.add_argument('--train', default=False)
+    parser.add_argument('--train', default=True)
 
     args = parser.parse_args()
     model_to_run = args.model
