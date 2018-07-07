@@ -12,17 +12,18 @@ from keras.preprocessing.image import ImageDataGenerator
 
 
 class cifar10vgg:
-    def __init__(self, train=True):
+    def __init__(self, train=True, empty_model=False):
         self.name = "vgg"
         self.num_classes = 10
         self.weight_decay = 0.0005
         self.x_shape = [32, 32, 3]
 
         self.model = self.build_model()
-        if train:
-            self.model = self.train(self.model)
-        else:
-            self.model.load_weights('/home/one-pixel-attack-keras-master/vgg_models/cifar10vgg.h5')
+        if not empty_model:
+            if train:
+                self.model = self.train(self.model)
+            else:
+                self.model.load_weights('/home/one-pixel-attack-keras-master/vgg_models/cifar10vgg.h5')
 
     def build_model(self):
         # Build the network of vgg for 10 classes with massive dropout and weight decay as described in the paper.
